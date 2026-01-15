@@ -1,0 +1,219 @@
+# -*- coding: utf-8 -*-
+"""
+销售反馈表 HTML + CSS 可交互原型
+Python 3.10+ Windows
+需本地 ChromeDriver
+"""
+
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+import os, time
+
+# ----------------------
+# 1. 本地 ChromeDriver 路径
+# ----------------------
+chrome_driver_path = r"C:\Users\FS\chromedriver-win64\chromedriver.exe"  # 修改为你的路径
+
+# ----------------------
+# 2. HTML 内容
+# ----------------------
+html_content = """
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>销售反馈表</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .star { cursor: pointer; font-size: 1.8rem; transition: color 0.2s; }
+  .tooltip-content { display: none; position: absolute; background: #1E40AF; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; white-space: nowrap; z-index: 10; }
+</style>
+</head>
+<body class="bg-gray-100 p-6">
+
+<div class="max-w-xl mx-auto bg-white rounded-lg shadow-lg p-6 space-y-4">
+  <!-- 表头 -->
+  <div>
+    <h1 class="text-2xl font-bold mb-1">销售反馈表</h1>
+    <p class="text-sm text-gray-500">本反馈不会直接向客服本人呈现，销售需保持客观态度给出真实的反馈，便于后期针对性改进对客服的培训，优化系统流程等</p>
+  </div>
+
+  <!-- 维度 -->
+  <div class="space-y-4">
+
+    <!-- 专业度 -->
+    <div class="space-y-1">
+      <div class="flex items-center space-x-1 relative">
+        <span class="font-semibold">专业度</span>
+        <span class="tooltip cursor-pointer bg-blue-500 text-white rounded-full text-xs px-1 ml-1">!</span>
+        <div class="tooltip-content absolute -top-6 left-0">客服是否按流程收集 Case 所需关键信息，并提供准确产品/操作信息</div>
+        <!-- 星星 -->
+        <span class="star text-gray-400" data-dim="1" data-value="1">★</span>
+        <span class="star text-gray-400" data-dim="1" data-value="2">★</span>
+        <span class="star text-gray-400" data-dim="1" data-value="3">★</span>
+        <span class="star text-gray-400" data-dim="1" data-value="4">★</span>
+        <span class="star text-gray-400" data-dim="1" data-value="5">★</span>
+      </div>
+      <div class="ml-6 mt-2 hidden" id="labels1">
+        <label class="block"><input type="checkbox" class="mr-1">关键信息（订单号、型号、数量、DDM 等）</label>
+        <label class="block"><input type="checkbox" class="mr-1">提问覆盖必需信息（未问或问多余信息）</label>
+        <label class="block"><input type="checkbox" class="mr-1">信息准确性（价格、库存、操作步骤等）</label>
+        <label class="block"><input type="checkbox" class="mr-1">建议或推荐时机（在信息确认后提供）</label>
+      </div>
+    </div>
+
+    <!-- 时效性 -->
+    <div class="space-y-1">
+      <div class="flex items-center space-x-1 relative">
+        <span class="font-semibold">时效性</span>
+        <span class="tooltip cursor-pointer bg-blue-500 text-white rounded-full text-xs px-1 ml-1">!</span>
+        <div class="tooltip-content absolute -top-6 left-0">客服是否按 SLA 和流程及时响应，并在关键节点推进处理</div>
+        <!-- 星星 -->
+        <span class="star text-gray-400" data-dim="2" data-value="1">★</span>
+        <span class="star text-gray-400" data-dim="2" data-value="2">★</span>
+        <span class="star text-gray-400" data-dim="2" data-value="3">★</span>
+        <span class="star text-gray-400" data-dim="2" data-value="4">★</span>
+        <span class="star text-gray-400" data-dim="2" data-value="5">★</span>
+      </div>
+      <div class="ml-6 mt-2 hidden" id="labels2">
+        <label class="block"><input type="checkbox" class="mr-1">响应时间（首次回复或过程中的响应）</label>
+        <label class="block"><input type="checkbox" class="mr-1">关键节点推进（补信息、承诺回复、流程推进）</label>
+        <label class="block"><input type="checkbox" class="mr-1">处理状态沟通（是否告知客户当前处理状态和预期）</label>
+        <label class="block"><input type="checkbox" class="mr-1">紧急 Case 处理（是否说明加急处理方式）</label>
+      </div>
+    </div>
+
+    <!-- 客户互动体验 -->
+    <div class="space-y-1">
+      <div class="flex items-center space-x-1 relative">
+        <span class="font-semibold">客户互动体验</span>
+        <span class="tooltip cursor-pointer bg-blue-500 text-white rounded-full text-xs px-1 ml-1">!</span>
+        <div class="tooltip-content absolute -top-6 left-0">客服沟通是否清晰、专业，客户是否愿意继续配合</div>
+        <!-- 星星 -->
+        <span class="star text-gray-400" data-dim="3" data-value="1">★</span>
+        <span class="star text-gray-400" data-dim="3" data-value="2">★</span>
+        <span class="star text-gray-400" data-dim="3" data-value="3">★</span>
+        <span class="star text-gray-400" data-dim="3" data-value="4">★</span>
+        <span class="star text-gray-400" data-dim="3" data-value="5">★</span>
+      </div>
+      <div class="ml-6 mt-2 hidden" id="labels3">
+        <label class="block"><input type="checkbox" class="mr-1">表达清晰度（信息表达易理解）</label>
+        <label class="block"><input type="checkbox" class="mr-1">沟通情绪管理（客户情绪得到关注与安抚）</label>
+        <label class="block"><input type="checkbox" class="mr-1">解释与说明（让客户清楚下一步及处理逻辑）</label>
+        <label class="block"><input type="checkbox" class="mr-1">沟通态度（礼貌、专业、友好）</label>
+      </div>
+    </div>
+
+    <!-- 其他影响因素折叠 -->
+    <div>
+      <div class="flex items-center cursor-pointer select-none" onclick="toggleOther()">
+        <span class="font-semibold">其他影响因素</span>
+        <span id="otherArrow" class="ml-1 text-gray-500 transition-transform">&#9660;</span>
+      </div>
+      <div class="ml-6 mt-2 hidden" id="otherLabels">
+        <label class="block"><input type="checkbox" class="mr-1">系统 Bug</label>
+        <label class="block"><input type="checkbox" class="mr-1">流程限制</label>
+        <label class="block"><input type="checkbox" class="mr-1">客户信息不完整</label>
+        <label class="block"><input type="checkbox" class="mr-1">外部因素</label>
+        <label class="block"><input type="checkbox" class="mr-1">其他（可填写）</label>
+      </div>
+    </div>
+
+    <!-- 备注 -->
+    <div>
+      <textarea class="w-full border border-gray-300 rounded p-2" rows="3" placeholder="备注（可选）"></textarea>
+    </div>
+
+    <!-- 提交按钮 -->
+    <div>
+      <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onclick="submitFeedback()">提交评分</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Tooltip显示
+  document.querySelectorAll('.tooltip').forEach(t=>{
+    t.addEventListener('click',()=>{
+      const tip = t.nextElementSibling;
+      tip.style.display = tip.style.display==='block'?'none':'block';
+    });
+  });
+
+  // 星星评分逻辑
+  document.querySelectorAll('.star').forEach(s=>{
+    s.addEventListener('click',()=>{
+      const dim = s.dataset.dim;
+      const val = parseInt(s.dataset.value);
+      const stars = document.querySelectorAll(`.star[data-dim="${dim}"]`);
+      stars.forEach(st=>{
+        st.classList.remove('text-red-500','text-orange-500','text-green-500','selected');
+        if(parseInt(st.dataset.value)<=val) st.classList.add('selected');
+      });
+      let colorClass='';
+      if(val<=2) colorClass='text-red-500';
+      else if(val===3) colorClass='text-orange-500';
+      else colorClass='text-green-500';
+      document.querySelectorAll(`.star[data-dim="${dim}"].selected`).forEach(st=>{
+        st.classList.add(colorClass);
+      });
+      // 显示/隐藏低分标签
+      const labelDiv = document.getElementById('labels'+dim);
+      labelDiv.style.display = (val<=3)?'block':'none';
+    });
+  });
+
+  // 其他影响因素折叠
+  function toggleOther(){
+    const div = document.getElementById('otherLabels');
+    div.classList.toggle('hidden');
+    const arrow = document.getElementById('otherArrow');
+    arrow.style.transform = div.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+
+  // 提交按钮逻辑
+  function submitFeedback(){
+    alert('评分已保存！');
+  }
+</script>
+
+</body>
+</html>
+"""
+
+# 写入文件
+with open("feedback.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("feedback.html 已生成，可在浏览器打开查看交互原型。")
+
+# ----------------------
+# 3. 保存 HTML 文件
+# ----------------------
+html_file = "sales_feedback.html"
+with open(html_file, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+# ----------------------
+# 4. Selenium 打开网页并截图
+# ----------------------
+options = webdriver.ChromeOptions()
+# options.add_argument("--headless")  # 注释掉可调试可视化
+options.add_argument("--start-maximized")
+
+service = Service(r"C:\Users\FS\chromedriver-win64\chromedriver-win64\chromedriver.exe")
+driver = webdriver.Chrome(service=service, options=options)
+
+# 打开本地 HTML
+driver.get("file://" + os.path.abspath(html_file))
+time.sleep(1)
+
+# 截图
+screenshot_file = "sales_feedback.png"
+driver.save_screenshot(screenshot_file)
+print(f"截图已生成: {screenshot_file}")
+
+input("浏览器已打开，可交互，按回车退出...")
+driver.quit()
